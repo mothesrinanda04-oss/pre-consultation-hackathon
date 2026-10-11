@@ -1,0 +1,117 @@
+# Auto detect text files and perform LF normalization
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>OP Queue AI Assistant</title>
+<style>
+:root{box-sizing:border-box;--bg:#f3f8fb;--cd:#fff;--tx:#12263a;--mu:#5b6b7a;--pr:#0a7ea4;--ok:#1b8a4b;--am:#b86e00;--rd:#c62828;--bd:#d3dee7}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1923;--cd:#17262f;--tx:#e8f0f5;--mu:#9fb2c0;--pr:#4cc3e8;--ok:#58c887;--am:#f0a640;--rd:#ff6b6b;--bd:#2a3c48}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:17px/1.4 system-ui,"Noto Sans Telugu",sans-serif}
+main{max-width:480px;margin:0 auto;padding:12px 14px 130px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs button{flex:1;padding:10px;border:1px solid var(--bd);background:var(--cd);color:var(--tx);border-radius:10px;font:inherit;font-weight:600}
+.tabs .on{background:var(--pr);color:#fff;border-color:var(--pr)}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:12px}
+h1{font-size:22px;margin:4px 0 8px}h2{font-size:21px;margin:0 0 12px}
+.big{display:block;width:100%;padding:18px;margin:10px 0;border-radius:14px;border:2px solid var(--bd);background:var(--cd);color:var(--tx);font:inherit;font-size:20px;font-weight:600;text-align:left}
+.big.sel{border-color:var(--pr);background:var(--pr);color:#fff}.big.r{border-left:8px solid var(--rd)}.big.a{border-left:8px solid var(--am)}
+.pri{background:var(--pr);color:#fff;border-color:var(--pr);text-align:center}
+.spk{border:0;background:none;font-size:15px;color:var(--pr);font-weight:600;padding:6px 0}
+input,textarea{width:100%;padding:14px;font:inherit;border:2px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);margin:6px 0}
+.bar{height:8px;background:var(--bd);border-radius:6px;margin-bottom:14px}.bar i{display:block;height:100%;background:var(--pr);border-radius:6px}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;color:#fff;font-weight:700;font-size:14px}
+.L0{background:var(--ok)}.L1{background:var(--am)}.L2{background:var(--rd)}
+.alert{background:var(--rd);color:#fff;padding:14px;border-radius:14px;margin-bottom:12px;font-weight:700}
+.cap{position:fixed;left:0;right:0;bottom:0;display:none;z-index:9;padding:12px 16px;background:var(--pr);color:#fff;font-size:18px;font-weight:600;max-height:40%;overflow:auto}
+details{margin-top:8px}summary{color:var(--pr);font-weight:600}small,.mu{color:var(--mu)}
+</style></head><body><main id="app"></main><div id="cap" class="cap"></div>
+<script>
+const T=(te,en)=>({te,en}),O=(te,en,l=0)=>({te,en,l});
+const NONE=O('లేదు','No'),Y=O('అవును','Yes'),Y1=O('అవును','Yes',1),Y2=O('అవును','Yes',2);
+const Q=[
+{id:'dur',q:T('ఎంత కాలంగా ఈ సమస్య ఉంది?','How long have you had this problem?'),o:[O('ఈరోజే','Since today'),O('2-3 రోజులు','2-3 days'),O('ఒక వారం','About a week'),O('నెలకు పైగా','More than a month',1)]},
+{id:'sud',q:T('ఇది అకస్మాత్తుగా మొదలైందా?','Did it start suddenly?'),o:[O('అవును, అకస్మాత్తుగా','Yes, suddenly',1),O('లేదు, నెమ్మదిగా','No, gradually')]},
+{id:'sev',q:T('నొప్పి లేదా ఇబ్బంది ఎంత ఎక్కువగా ఉంది?','How bad is the pain or discomfort?'),o:[O('కొద్దిగా','Mild'),O('మధ్యస్థంగా','Moderate'),O('చాలా ఎక్కువ','Severe',1),O('భరించలేనంత','Unbearable',2)]},
+{id:'trend',q:T('ఇప్పుడు సమస్య ఎలా ఉంది?','How is the problem now?'),o:[O('తగ్గుతోంది','Getting better'),O('అలాగే ఉంది','Same'),O('పెరుగుతోంది','Getting worse',1)]},
+{id:'chest',only:['chest'],q:T('ఛాతీలో బరువు, చెమటలు, లేదా నొప్పి చేయి/దవడకు వ్యాపిస్తోందా?','Is there chest pressure, sweating, or pain spreading to arm or jaw?'),o:[NONE,Y2]},
+{id:'palp',only:['chest'],q:T('గుండె వేగంగా లేదా అసాధారణంగా కొట్టుకుంటోందా?','Is your heart beating fast or irregularly?'),o:[NONE,Y1]},
+{id:'head',only:['head'],q:T('తలనొప్పితో పాటు మాట తడబడటం, చూపు మసకబారడం లేదా ఒకవైపు బలహీనత ఉందా?','With the headache: slurred speech, blurred vision, or weakness on one side?'),o:[NONE,Y2]},
+{id:'hloc',only:['head'],q:T('తలనొప్పి ఎక్కడ ఉంది?','Where is the headache?'),o:[O('ఒక వైపు','One side'),O('నుదురు','Forehead'),O('తల వెనుక','Back of head'),O('తల అంతా','Whole head')]},
+{id:'hinj',only:['head'],q:T('ఇటీవల తలకు దెబ్బ తగిలిందా?','Any recent head injury?'),o:[NONE,Y1]},
+{id:'neck',only:['head'],q:T('మెడ గట్టిగా అనిపిస్తోందా లేదా వెలుతురు చూడలేకపోతున్నారా?','Stiff neck, or unable to tolerate light?'),o:[NONE,Y1]},
+{id:'abd',only:['abdomen'],q:T('కడుపు రాయిలా గట్టిగా ఉందా లేదా నొప్పి భరించలేనంతగా ఉందా?','Is the abdomen hard like a board, or the pain unbearable?'),o:[NONE,Y2]},
+{id:'aloc',only:['abdomen'],q:T('కడుపులో ఎక్కడ నొప్పి?','Where in the abdomen is the pain?'),o:[O('పైన','Upper abdomen'),O('కుడి కింద','Lower right',1),O('ఎడమ కింద','Lower left'),O('నాభి చుట్టూ','Around the navel'),O('కడుపంతా','All over')]},
+{id:'stool',only:['abdomen'],q:T('మలం నల్లగా లేదా రక్తంతో ఉందా?','Is the stool black or bloody?'),o:[NONE,Y1]},
+{id:'bvom',only:['abdomen'],q:T('వాంతిలో రక్తం పడిందా?','Have you vomited blood?'),o:[NONE,Y2]},
+{id:'inj',only:['arms','legs'],q:T('ఇటీవల దెబ్బ లేదా పడిపోవడం జరిగిందా?','Any recent injury or fall?'),o:[NONE,Y1]},
+{id:'swell',only:['arms','legs'],q:T('ఆ భాగంలో వాపు లేదా ఎరుపు ఉందా?','Is there swelling or redness there?'),o:[NONE,Y]},
+{id:'num',only:['arms','legs'],q:T('తిమ్మిరి లేదా బలహీనత ఉందా?','Any numbness or weakness?'),o:[NONE,Y1]},
+{id:'move',only:['arms','legs'],q:T('ఆ భాగాన్ని కదిలించగలరా?','Can you move that part?'),o:[O('అవును','Yes'),O('కష్టంగా','With difficulty',1),O('అస్సలు కదలదు','Cannot move at all',2)]},
+{id:'bleg',only:['back'],q:T('నొప్పి కాళ్లకు వ్యాపిస్తోందా?','Does the pain spread to your legs?'),o:[NONE,Y1]},
+{id:'ctrl',only:['back'],q:T('మల మూత్రాలపై నియంత్రణ తప్పిందా?','Have you lost control of urine or stool?'),o:[NONE,Y2]},
+{id:'rash',only:['body'],q:T('ఒంటిపై దద్దుర్లు లేదా పొక్కులు ఉన్నాయా?','Any rash or blisters on the body?'),o:[NONE,Y]},
+{id:'fev',q:T('జ్వరం ఉందా?','Do you have fever?'),o:[NONE,O('కొద్దిగా జ్వరం','Mild fever'),O('ఎక్కువ జ్వరం, వణుకు','High fever with chills',1)]},
+{id:'cough',q:T('దగ్గు ఉందా?','Do you have a cough?'),o:[NONE,O('పొడి దగ్గు','Dry cough'),O('కఫంతో దగ్గు','Cough with phlegm'),O('రక్తంతో దగ్గు','Coughing blood',2)]},
+{id:'br',q:T('ఊపిరి తీసుకోవడం కష్టంగా ఉందా?','Do you have difficulty breathing?'),o:[NONE,O('కొద్దిగా','Slightly',1),O('అవును, చాలా కష్టం','Yes, very difficult',2)]},
+{id:'vom',q:T('వాంతులు లేదా విరేచనాలు ఉన్నాయా?','Any vomiting or loose motions?'),o:[NONE,O('అవును, కొన్నిసార్లు','Yes, a few times'),O('అవును, ఆగకుండా','Yes, repeatedly',1)]},
+{id:'weak',q:T('చాలా నీరసంగా ఉందా లేదా తినడం, తాగడం కష్టంగా ఉందా?','Do you feel very weak, or cannot eat or drink?'),o:[NONE,O('నీరసంగా ఉంది','Feeling weak'),O('తినలేను, తాగలేను','Cannot eat or drink',1)]},
+{id:'urine',q:T('మూత్రంలో మంట ఉందా లేదా మూత్రం తక్కువగా వస్తోందా?','Burning urine, or passing very little urine?'),o:[NONE,Y]},
+{id:'bl',q:T('ఎక్కువ రక్తస్రావం అవుతోందా?','Is there heavy bleeding?'),o:[NONE,Y2]},
+{id:'fa',q:T('స్పృహ తప్పడం, గందరగోళం లేదా తీవ్రమైన తల తిరగడం ఉందా?','Fainting, confusion, or severe dizziness?'),o:[NONE,Y2]},
+{id:'sleep',q:T('నిద్ర సరిగ్గా పడుతోందా?','Are you sleeping well?'),o:[O('అవును','Yes'),O('లేదు','No')]},
+{id:'wt',q:T('ఇటీవల కారణం లేకుండా బరువు తగ్గారా?','Recent weight loss without reason?'),o:[NONE,Y]},
+{id:'cont',q:T('ఇంట్లో ఎవరికైనా ఇలాంటి జ్వరం లేదా దగ్గు ఉందా?','Does anyone at home have a similar fever or cough?'),o:[NONE,Y]},
+{id:'prev',q:T('ఇంతకు ముందు ఇదే సమస్య వచ్చిందా?','Have you had this same problem before?'),o:[NONE,Y]},
+{id:'seen',q:T('ఈ సమస్యకు ఇంతకు ముందు డాక్టర్‌ను కలిశారా?','Did you see a doctor for this earlier?'),o:[NONE,Y]},
+{id:'cond',m:1,q:T('మీకు ఇప్పటికే ఏవైనా వ్యాధులు ఉన్నాయా? (ఒకటి కంటే ఎక్కువ ఎంచుకోవచ్చు)','Do you already have any of these? (select all that apply)'),o:[O('షుగర్','Diabetes'),O('బీపీ','High BP'),O('గుండె జబ్బు','Heart disease',1),O('ఆస్తమా','Asthma'),O('గర్భవతి','Pregnant',1),O('ఏమీ లేవు','None')]},
+{id:'hab',m:1,q:T('మీకు ఈ అలవాట్లు ఉన్నాయా?','Do you have any of these habits?'),o:[O('పొగ తాగడం','Smoking'),O('మద్యం','Alcohol'),O('పొగాకు / గుట్కా','Tobacco / gutka'),O('ఏమీ లేవు','None')]},
+{id:'surg',q:T('ఎప్పుడైనా ఆపరేషన్ జరిగిందా?','Have you ever had an operation?'),o:[NONE,Y]},
+{id:'all',q:T('ఏదైనా మందుకు అలర్జీ ఉందా?','Are you allergic to any medicine?'),o:[NONE,Y,O('తెలియదు','Not sure')]},
+{id:'med',q:T('ప్రస్తుతం మందులు వాడుతున్నారా?','Are you taking any medicines now?'),o:[NONE,Y]}
+];
+const PARTS=[['head','తల','Head'],['chest','ఛాతీ','Chest'],['abdomen','కడుపు','Abdomen'],['arms','చేతులు','Arms'],['legs','కాళ్లు','Legs'],['back','వెన్ను','Back'],['body','ఒళ్లంతా','Whole body']];
+const UI={pick:T('భాష ఎంచుకోండి / Choose language','Choose your language'),name:T('మీ పేరు మరియు వయసు','Your name and age'),nm:T('పేరు','Name'),ag:T('వయసు','Age'),next:T('తరువాత','Next'),body:T('మీకు శరీరంలో ఎక్కడ ఇబ్బందిగా ఉంది?','Where in your body is the problem?'),note:T('ఇంకేమైనా చెప్పాలనుకుంటే చెప్పండి (మైక్ నొక్కి మాట్లాడవచ్చు)','Anything else to tell the doctor? (tap mic to speak)'),done:T('పూర్తయింది','Submit'),listen:T('🔊 మళ్లీ వినండి','🔊 Listen again')};
+let S={v:'lang',lang:'en',name:'',age:'',part:'',other:'',ans:{},i:0,conf:0,note:'',tab:'p',rec:null},seen=new Set();
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tx=o=>o[S.lang];
+const load=()=>{try{return JSON.parse(localStorage.getItem('opq')||'[]')}catch(e){return[]}};
+const save=a=>{try{localStorage.setItem('opq',JSON.stringify(a))}catch(e){}};
+let VO=[];function loadV(){try{VO=speechSynthesis.getVoices()||[]}catch(e){}}loadV();try{speechSynthesis.onvoiceschanged=loadV}catch(e){}
+function findV(l){const p=l.slice(0,2);return VO.find(v=>v.lang.replace('_','-').toLowerCase()==l.toLowerCase())||VO.find(v=>v.lang.toLowerCase().startsWith(p))}
+function speak(s){const l=S.lang=='te'?'te-IN':'en-IN';let miss=false;try{loadV();const v=findV(l);miss=S.lang=='te'&&!v;const ss=speechSynthesis;ss.cancel();const u=new SpeechSynthesisUtterance(s);u.lang=l;if(v)u.voice=v;u.rate=.85;window._u=u;setTimeout(()=>{ss.resume();ss.speak(u)},80)}catch(e){miss=true}
+const c=$('cap');if(c){c.style.display='block';c.textContent=(miss?'⚠ Voice for this language not found on this device (Settings → Language → Text-to-speech → install Telugu). ':'')+'🔊 '+s}}
+function beep(){try{const c=new AudioContext(),o=c.createOscillator();o.frequency.value=880;o.connect(c.destination);o.start();setTimeout(()=>{o.stop();c.close()},600)}catch(e){}}
+const qs=()=>Q.filter(q=>!q.only||q.only.includes(S.part));
+function tabs(){return`<div class="tabs"><button class="${S.tab=='p'?'on':''}" onclick="S.tab='p';go()">📱 Patient</button><button class="${S.tab=='s'?'on':''}" onclick="S.tab='s';go()">🩺 Doctor / Nurse</button></div>`}
+function go(v){if(v)S.v=v;render()}
+function render(){let h=tabs(),say='';
+if(S.tab=='s'){$('app').innerHTML=h+staff();return}
+if(S.v=='lang'){h+=`<div class="card"><h1>🏥 OP Queue Assistant</h1><p class="mu">${tx(UI.pick)}</p><button class="spk" onclick="S.lang='te';speak('నమస్తే, మీ భాషను ఎంచుకోండి');setTimeout(()=>{S.lang='en';speak('Hello, please choose your language')},3500)">🔊 Test voice / వాయిస్ పరీక్ష</button><button class="big" onclick="pickL('te')">తెలుగు</button><button class="big" onclick="pickL('en')">English</button></div>`}
+else if(S.v=='info'){say=tx(UI.name);h+=`<div class="card"><h2>${say}</h2><input id="n" placeholder="${tx(UI.nm)}" value="${esc(S.name)}"><input id="a" type="number" inputmode="numeric" placeholder="${tx(UI.ag)}" value="${esc(S.age)}"><button class="big pri" onclick="info()">${tx(UI.next)} →</button></div>`}
+else if(S.v=='body'){say=tx(UI.body)+'. '+PARTS.map(p=>S.lang=='te'?p[1]:p[2]).join('. ')+'. '+(S.lang=='te'?'ఇతర':'Other');h+=`<div class="card"><h2>${tx(UI.body)}</h2><button class="spk" onclick="speak(this.dataset.t)" data-t="${esc(say)}">${tx(UI.listen)}</button>${PARTS.map(p=>`<button class="big" onclick="part('${p[0]}')">${S.lang=='te'?p[1]:p[2]}</button>`).join('')}<button class="big a" onclick="go('other')">✍ ${S.lang=='te'?'ఇతర (జాబితాలో లేదు – టైప్ చేయండి లేదా చెప్పండి)':'Other (not listed – type or speak)'}</button></div>`}
+else if(S.v=='other'){say=S.lang=='te'?'మీ సమస్య ఏమిటో టైప్ చేయండి లేదా మైక్ నొక్కి చెప్పండి':'Type your problem, or tap the mic and speak';h+=`<div class="card"><h2>${say}</h2><textarea id="ot" rows="4">${esc(S.other||'')}</textarea><button class="big" onclick="mic('ot')">🎤 ${S.lang=='te'?'మాట్లాడండి':'Speak'}</button><button class="big pri" onclick="other()">${tx(UI.next)} →</button></div>`}
+else if(S.v=='q'){const L=qs(),q=L[S.i],sel=S.ans[q.id]||[],te=S.lang=='te';say=tx(q.q)+'. '+q.o.map(o=>tx(o)).join('. ');
+if(S.conf){const c=sel.map(k=>tx(q.o[k])).join(', ');say=(te?'మీరు ఎంచుకున్నది: ':'You selected: ')+c+(te?'. సరైతే ఆకుపచ్చ బటన్ నొక్కండి. కాకపోతే మార్చండి.':'. If correct, press the green button. Otherwise press change.');
+$('app').innerHTML=h+`<div class="card"><h2>${tx(q.q)}</h2><p class="mu">${te?'మీరు ఎంచుకున్నది':'You selected'}:</p><div class="big sel">✔ ${esc(c)}</div><button class="big pri" style="background:var(--ok);border-color:var(--ok)" onclick="nxt()">✓ ${te?'సరే':'Correct'}</button><button class="big" onclick="S.conf=0;render()">↩ ${te?'మార్చు':'Change'}</button></div>`;speak(say);return}
+h+=`<div class="card"><div class="bar"><i style="width:${(S.i+1)/L.length*100}%"></i></div><h2>${tx(q.q)}</h2><button class="spk" onclick="speak(this.dataset.t)" data-t="${esc(say)}">${tx(UI.listen)}</button>${q.o.map((o,k)=>`<button class="big ${o.l==2?'r':o.l==1?'a':''} ${sel.includes(k)?'sel':''}" onclick="ans(${k})">${tx(o)}</button>`).join('')}${q.m?`<button class="big pri" onclick="ask()">${tx(UI.next)} →</button>`:''}</div>`}
+else if(S.v=='note'){say=tx(UI.note);h+=`<div class="card"><h2>${say}</h2><textarea id="nt" rows="4">${esc(S.note)}</textarea><button class="big" onclick="mic()">🎤 ${S.lang=='te'?'మాట్లాడండి':'Speak'}</button><button class="big pri" onclick="fin()">${tx(UI.done)} ✓</button></div>`}
+else if(S.v=='done'){const r=S.rec,red=r.level==2;say=red?(S.lang=='te'?'దయచేసి కూర్చోండి. డాక్టర్ మరియు నర్సుకు వెంటనే తెలియజేశాం. వారు మీ దగ్గరకు వస్తారు.':'Please stay seated. The doctor and nurse have been alerted and will come to you now.'):(S.lang=='te'?`ధన్యవాదాలు. మీ టోకెన్ నంబర్ ${r.token}. దయచేసి మీ వంతు వచ్చే వరకు వేచి ఉండండి.`:`Thank you. Your token number is ${r.token}. Please wait for your turn.`);
+h+=`<div class="card" style="text-align:center"><div style="font-size:56px">${red?'🚨':'✅'}</div><h2>${say}</h2><div style="font-size:48px;font-weight:800">#${r.token}</div><button class="spk" onclick="speak(this.dataset.t)" data-t="${esc(say)}">${tx(UI.listen)}</button><button class="big pri" onclick="reset()">New patient / కొత్త రోగి</button></div>`}
+$('app').innerHTML=h;if(say&&S.tab=='p')speak(say)}
+function pickL(l){S.lang=l;go('info')}
+function info(){S.name=$('n').value.trim();S.age=$('a').value;if(!S.name){$('n').focus();return}go('body')}
+function part(p){S.part=p;S.i=0;S.ans={};S.conf=0;go('q')}
+function other(){S.other=$('ot').value.trim();if(!S.other){$('ot').focus();return}S.part='other';S.i=0;S.ans={};S.conf=0;go('q')}
+function ans(k){const q=qs()[S.i];if(q.m){let a=S.ans[q.id]||[];const none=q.o.length-1;if(k==none)a=[none];else{a=a.filter(x=>x!=none);a=a.includes(k)?a.filter(x=>x!=k):[...a,k]}S.ans[q.id]=a;render();return}S.ans[q.id]=[k];S.conf=1;render()}
+function ask(){const q=qs()[S.i];if(!(S.ans[q.id]||[]).length)return;S.conf=1;render()}
+function nxt(){const q=qs()[S.i];S.conf=0;if(!(S.ans[q.id]||[]).length)return;if(S.i<qs().length-1){S.i++;render()}else go('note')}
+function mic(id){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){alert('Voice typing not supported on this browser');return}const r=new R();r.lang=S.lang=='te'?'te-IN':'en-IN';r.onresult=e=>{$(id||'nt').value+=' '+e.results[0][0].transcript};r.start()}
+function fin(){S.note=$('nt').value;const L=qs();let lv=0,fl=[],qa=[];
+L.forEach(q=>{const a=S.ans[q.id]||[];qa.push({q:q.q.en,a:a.map(k=>q.o[k].en).join(', ')});a.forEach(k=>{const o=q.o[k];lv=Math.max(lv,o.l);if(o.l>=1)fl.push((o.l==2?'RED: ':'Watch: ')+q.q.en+' → '+o.en)})});
+const all=load(),r={id:Date.now(),token:all.length+1,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),name:S.name,age:S.age,lang:S.lang=='te'?'Telugu':'English',part:S.part=='other'?'Other: '+S.other:PARTS.find(p=>p[0]==S.part)[2],qa,fl,level:lv,note:S.note,seen:false};
+all.push(r);save(all);S.rec=r;go('done')}
+function reset(){S={...S,v:'info',name:'',age:'',part:'',other:'',ans:{},i:0,conf:0,note:'',rec:null};render()}
+function staff(){const a=load().sort((x,y)=>y.level-x.level||x.id-y.id),reds=a.filter(r=>r.level==2&&!r.seen);
+let newRed=reds.some(r=>!seen.has(r.id));reds.forEach(r=>seen.add(r.id));if(newRed)beep();
+const nm=['Normal','Priority','RED ALERT'];
+return`<h1>Doctor / Nurse dashboard</h1><p class="mu">Patients' answers are already recorded – no need to re-ask basic history.</p>${reds.map(r=>`<div class="alert">🚨 RED ALERT sent to Doctor + Nurse<br>#${r.token} ${esc(r.name)}, ${esc(r.age)} – ${esc(r.part)}</div>`).join('')}${a.length?'':'<div class="card mu">No patients yet. Register one in the Patient tab.</div>'}${a.map(r=>`<div class="card" style="${r.seen?'opacity:.55':''}"><b>#${r.token} ${esc(r.name)}</b>, ${esc(r.age)} yrs <span class="badge L${r.level}">${nm[r.level]}</span><br><small>${r.time} · ${r.lang} · Problem area: ${esc(r.part)}</small>${r.fl.length?`<ul>${r.fl.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:''}${r.note?`<p>“${esc(r.note)}”</p>`:''}<details><summary>Full history</summary>${r.qa.map(x=>`<div><small>${esc(x.q)}</small><br><b>${esc(x.a)}</b></div>`).join('')}</details>${r.seen?'':`<button class="big pri" style="margin-bottom:0;padding:12px" onclick="seenIt(${r.id})">Attend / Mark seen</button>`}</div>`).join('')}<button class="spk" onclick="if(confirm('Clear all?')){save([]);render()}">Clear demo data</button>`}
+function seenIt(id){const a=load();a.forEach(r=>{if(r.id==id)r.seen=true});save(a);render()}
+addEventListener('storage',()=>{if(S.tab=='s')render()});setInterval(()=>{if(S.tab=='s'&&!document.activeElement.closest('details'))render()},4000);
+render();
+</script></body></html>
